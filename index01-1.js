@@ -1,5 +1,5 @@
-const fs = require('fs');
-const readline = require('readline');
+const fs = require('fs')
+const readline = require('readline')
 
 async function processLineByLine(file) {
     const fileStream = fs.createReadStream(file);
@@ -19,4 +19,4 @@ async function processLineByLine(file) {
     console.log(totalFuel)
 }
 
-processLineByLine('input01.txt');
+processLineByLine('input01.txt')

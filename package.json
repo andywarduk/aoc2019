@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "description": "AOC 1",
   "main": "index1.js",
-  "dependencies": {
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "devDependencies": {
     "eslint": "^6.7.2"
   },
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
