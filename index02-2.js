@@ -18,7 +18,7 @@ for (let noun = 0; noun < 100 ; noun++){
 
 function runProg(initMem, noun, verb)
 {
-    mem = [...initMem]
+    const mem = [...initMem]
     mem[1] = noun
     mem[2] = verb
 

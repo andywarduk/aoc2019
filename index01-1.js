@@ -11,8 +11,8 @@ async function processLineByLine(file) {
 
     let totalFuel = 0
     for await (const line of rl) {
-        mass = parseInt(line)
-        fuel = Math.floor(mass / 3) - 2
+        const mass = parseInt(line)
+        const fuel = Math.floor(mass / 3) - 2
         totalFuel += fuel
     }
 
