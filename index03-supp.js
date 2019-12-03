@@ -123,8 +123,6 @@ function process(fileCnt, outFile)
         }
     }
 
-    drawPixel(0, 0, colours[0])
-
     console.log(`Writing ${outFile}...`)
     const buffer = PNG.sync.write(png)
     fs.writeFileSync(outFile, buffer)
