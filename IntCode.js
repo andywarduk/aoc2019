@@ -1,5 +1,6 @@
-module.exports.exec = (debug, mem, input, output) =>
+module.exports.exec = (debug, mem, input, output, pc = 0) =>
 {
+    let stopReason = 'error'
     let running = true
 
     const opcodes = {
@@ -28,7 +29,10 @@ module.exports.exec = (debug, mem, input, output) =>
             name: 'out',
             args: 'r',
             fn: (a) => {
-                output(a)
+                if (output(a) === false) {
+                    running = false
+                    stopReason = 'output'
+                }
             }
         },
         5: { // Jump if true
@@ -66,11 +70,10 @@ module.exports.exec = (debug, mem, input, output) =>
             args: '',
             fn: () => {
                 running = false
+                stopReason = 'halt'
             }
         }
     }
-
-    let pc = 0
 
     while(running) {
         let disas = `${pc}: `
@@ -143,5 +146,10 @@ module.exports.exec = (debug, mem, input, output) =>
 
         // Call the function
         opDef.fn(...args)
+    }
+
+    return {
+        pc,
+        stopReason
     }
 }
