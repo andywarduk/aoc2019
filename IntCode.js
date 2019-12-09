@@ -1,4 +1,4 @@
-module.exports.exec = (debug, mem, input, output, pc = 0) =>
+function executeIntCode(debug, mem, input, output, pc = 0)
 {
     let stopReason = 'error'
     let running = true
@@ -216,4 +216,171 @@ module.exports.exec = (debug, mem, input, output, pc = 0) =>
         pc,
         stopReason
     }
+}
+
+if (require.main === module) {
+    // Running as a script - do some tests
+    testIntCode()
+
+} else {
+    // Required as a module
+    module.exports.exec = executeIntCode
+
+}
+
+function assertEqual(expected, actual)
+{
+    if (actual != expected) throw new Error(`${actual} != ${expected}`)
+}
+
+function assertArrayEquals(expected, actual)
+{
+    let same = false
+
+    if (actual.length == expected.length) {
+        same = true
+        for(let i = 0; i < actual.length; i++) {
+            if (actual[i] != expected[i]) {
+                same = false
+                break
+            }
+        }
+    }
+
+    if (!same) throw new Error(`${actual} != ${expected}`)
+}
+
+function testIntCode()
+{
+    let mem
+    let res
+    let prog
+    let cnt
+
+    console.log("Running tests...")
+
+    mem = [1,9,10,3,2,3,11,0,99,30,40,50]
+    res = executeIntCode(false, mem, () => 0, console.log)
+    assertEqual(9, res.pc)
+    assertEqual('halt', res.stopReason)
+    assertArrayEquals([3500,9,10,70,2,3,11,0,99,30,40,50], mem)
+
+    mem = [1,0,0,0,99]
+    res = executeIntCode(false, mem, () => 0, console.log)
+    assertEqual(5, res.pc)
+    assertEqual('halt', res.stopReason)
+    assertArrayEquals([2,0,0,0,99], mem)
+
+    mem = [2,3,0,3,99]
+    res = executeIntCode(false, mem, () => 0, console.log)
+    assertEqual(5, res.pc)
+    assertEqual('halt', res.stopReason)
+    assertArrayEquals([2,3,0,6,99], mem)
+
+    mem = [2,4,4,5,99,0]
+    res = executeIntCode(false, mem, () => 0, console.log)
+    assertEqual(5, res.pc)
+    assertEqual('halt', res.stopReason)
+    assertArrayEquals([2,4,4,5,99,9801], mem)
+
+    mem = [1,1,1,4,99,5,6,0,99]
+    res = executeIntCode(false, mem, () => 0, console.log)
+    assertEqual(9, res.pc)
+    assertEqual('halt', res.stopReason)
+    assertArrayEquals([30,1,1,4,2,5,6,0,99], mem)
+
+    // Output the input
+    mem = [3,0,4,0,99]
+    res = executeIntCode(false, mem, () => 123, (x) => assertEqual(123, x))
+    assertEqual(5, res.pc)
+    assertEqual('halt', res.stopReason)
+    assertArrayEquals([123,0,4,0,99], mem)
+
+    // Output 1 if input equals 8, 0 otherwise (position mode)
+    mem = [3,9,8,9,10,9,4,9,99,-1,8]
+    res = executeIntCode(false, mem, () => 8, (x) => assertEqual(1, x))
+    assertEqual('halt', res.stopReason)
+
+    mem = [3,9,8,9,10,9,4,9,99,-1,8]
+    res = executeIntCode(false, mem, () => 7, (x) => assertEqual(0, x))
+    assertEqual('halt', res.stopReason)
+    
+    // Output 1 if input < 8, else 0 (position mode)
+    mem = [3,9,7,9,10,9,4,9,99,-1,8]
+    res = executeIntCode(false, mem, () => 8, (x) => assertEqual(0, x))
+    assertEqual('halt', res.stopReason)
+
+    mem = [3,9,7,9,10,9,4,9,99,-1,8]
+    res = executeIntCode(false, mem, () => 7, (x) => assertEqual(1, x))
+    assertEqual('halt', res.stopReason)
+
+    // Output 1 if input equals 8, 0 otherwise (immediate mode)
+    mem = [3,3,1108,-1,8,3,4,3,99]
+    res = executeIntCode(false, mem, () => 8, (x) => assertEqual(1, x))
+    assertEqual('halt', res.stopReason)
+
+    mem = [3,3,1108,-1,8,3,4,3,99]
+    res = executeIntCode(false, mem, () => 7, (x) => assertEqual(0, x))
+    assertEqual('halt', res.stopReason)
+
+    // Output 1 if input < 8, else 0 (position mode)
+    mem = [3,3,1107,-1,8,3,4,3,99]
+    res = executeIntCode(false, mem, () => 8, (x) => assertEqual(0, x))
+    assertEqual('halt', res.stopReason)
+
+    mem = [3,3,1107,-1,8,3,4,3,99]
+    res = executeIntCode(false, mem, () => 7, (x) => assertEqual(1, x))
+    assertEqual('halt', res.stopReason)
+
+    // Jump tests that take an input, then output 0 if the input was zero or 1 if the input was non-zero
+    // Position mode
+    mem = [3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9]
+    res = executeIntCode(false, mem, () => 0, (x) => assertEqual(0, x))
+    assertEqual('halt', res.stopReason)
+
+    mem = [3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9]
+    res = executeIntCode(false, mem, () => 999, (x) => assertEqual(1, x))
+    assertEqual('halt', res.stopReason)
+
+    // Immediate mode
+    mem = [3,3,1105,-1,9,1101,0,0,12,4,12,99,1]
+    res = executeIntCode(false, mem, () => 0, (x) => assertEqual(0, x))
+    assertEqual('halt', res.stopReason)
+
+    mem = [3,3,1105,-1,9,1101,0,0,12,4,12,99,1]
+    res = executeIntCode(false, mem, () => 999, (x) => assertEqual(1, x))
+    assertEqual('halt', res.stopReason)
+
+    // Output 999 if input < 8, 1000 if input = 8, 1001 if input > 8
+    prog = [3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,
+        1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,
+        999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99]
+
+    res = executeIntCode(false, [...prog], () => 7, (x) => assertEqual(999, x))
+    assertEqual('halt', res.stopReason)
+
+    res = executeIntCode(false, [...prog], () => 8, (x) => assertEqual(1000, x))
+    assertEqual('halt', res.stopReason)
+
+    res = executeIntCode(false, [...prog], () => 9, (x) => assertEqual(1001, x))
+    assertEqual('halt', res.stopReason)
+    
+    // Program which copies itself as output
+    prog = [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99]
+    cnt = 0
+    res = executeIntCode(false, [...prog], () => 0, (x) => assertEqual(prog[cnt++], x))
+    assertEqual('halt', res.stopReason)
+    assertEqual(prog.length, cnt)
+
+    // Output large number
+    mem = [1102,34915192,34915192,7,4,7,99,0]
+    res = executeIntCode(false, mem, () => 0, (x) => assertEqual(34915192 * 34915192, x))
+    assertEqual('halt', res.stopReason)
+
+    // Output large number
+    mem = [104,1125899906842624,99]
+    res = executeIntCode(false, mem, () => 0, (x) => assertEqual(1125899906842624, x))
+    assertEqual('halt', res.stopReason)
+
+    console.log("Tests finished")
 }
