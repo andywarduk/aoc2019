@@ -2,27 +2,57 @@ module.exports.exec = (debug, mem, input, output, pc = 0) =>
 {
     let stopReason = 'error'
     let running = true
+    let relBase = 0
+    let maxMem = mem.length - 1
+
+    function extendMem(newLen) {
+        for (let i = mem.length; i <= newLen; i++) {
+            mem[i] = 0
+        }
+
+        if (debug){
+            console.log(`maxMem ${maxMem} => ${newLen}`)
+        }
+
+        maxMem = newLen
+    }
+
+    function getMem(addr) {
+        if (addr < 0) throw new Error(`Accessing address ${addr}, which is out of range`)
+        if (addr > maxMem) {
+            extendMem(addr)
+        }
+        return mem[addr]
+    }
+
+    function setMem(addr, value) {
+        if (addr < 0) throw new Error(`Writing address ${addr}, which is out of range `)
+        if (addr > maxMem) {
+            extendMem(addr)
+        }
+        mem[addr] = value
+    }
 
     const opcodes = {
         1: { // Addition
             name: 'add',
             args: 'rrw',
             fn: (a, b, c) => {
-                mem[c] = a + b
+                setMem(c, a + b)
             }
         },
         2: { // Multiplication
             name: 'mul',
             args: 'rrw',
             fn: (a, b, c) => {
-                mem[c] = a * b
+                setMem(c, a * b)
             }
         },
         3: { // Get input
             name: 'in',
             args: 'w',
             fn: (a) => {
-                mem[a] = input()
+                setMem(a, input())
             }
         },
         4: { // Print output
@@ -53,16 +83,23 @@ module.exports.exec = (debug, mem, input, output, pc = 0) =>
             name: 'lt',
             args: 'rrw',
             fn: (a, b, c) => {
-                if (a < b) mem[c] = 1
-                else mem[c] = 0
+                if (a < b) setMem(c, 1)
+                else setMem(c, 0)
             }
         },
         8: { // Equals
             name: 'eq',
             args: 'rrw',
             fn: (a, b, c) => {
-                if (a == b) mem[c] = 1
-                else mem[c] = 0
+                if (a == b) setMem(c, 1)
+                else setMem(c, 0)
+            }
+        },
+        9: { // Adjust relative base
+            name: 'arb',
+            args: 'r',
+            fn: (a) => {
+                relBase += a
             }
         },
         99: { // Halt
@@ -79,15 +116,14 @@ module.exports.exec = (debug, mem, input, output, pc = 0) =>
         let disas = `${pc}: `
 
         // Get instruction
-        let instruction = mem[pc].toString().padStart(8, '0')
+        let instruction = getMem(pc).toString().padStart(8, '0')
 
         // Extract opcode
         let op = parseInt(instruction.substring(6))
         let opDef = opcodes[op]
 
         if (!opDef) {
-            console.log(`Invalid opcode ${op} at ${pc}`)
-            break
+            throw new Error(`Invalid opcode ${op} at ${pc}`)
         }
 
         pc++
@@ -101,43 +137,71 @@ module.exports.exec = (debug, mem, input, output, pc = 0) =>
         let argModePos = 5
         for(let i = 0; i < opDef.args.length; i++) {
             // Fetch the arg
-            let arg = mem[pc]
+            let arg = getMem(pc)
             pc++
 
-            switch (opDef.args[i]) {
+            // Get addressing mode
+            const argMode = opDef.args[i]
+            const addrMode = instruction.substr(argModePos, 1)
+            --argModePos
+
+            switch (argMode) {
             case 'r':
                 // Read arg - check the mode
-                if (instruction.substr(argModePos, 1) == '0') {
+                switch (addrMode) {
+                case '0':
                     // Read from memory
                     if(debug) {
-                        disas += ` [${arg}]`
+                        disas += ` ${argMode}[${arg}]`
                     }
-                    arg = mem[arg]
-                } else{
+                    arg = getMem(arg)
+                    break
+                case '1':
                     // Immediate value
                     if(debug) {
                         disas += ` ${arg}`
                     }
+                    break
+                case '2':
+                    // Relative
+                    if(debug) {
+                        disas += ` ${argMode}[${relBase} + ${arg} = ${relBase + arg}]`
+                    }
+                    arg = getMem(relBase + arg)
+                    break
+                default:
+                    throw new Error(`Invalid addressing mode on read: ${addrMode}`)
                 }
                 break
 
             case 'w':
-                // Written to memory
-                if(debug) {
-                    disas += ` [${arg}]`
+                // Written arg - check the mode
+                switch (addrMode) {
+                case '0':
+                    // Written to memory
+                    if(debug) {
+                        disas += ` ${argMode}[${arg}]`
+                    }
+                    break
+                case '2':
+                    // Relative
+                    if(debug) {
+                        disas += ` ${argMode}[${relBase} + ${arg} = ${relBase + arg}]`
+                    }
+                    arg = relBase + arg
+                    break
+                default:
+                    throw new Error(`Invalid addressing mode on write: ${addrMode}`)
                 }
                 break
 
             default:
-                console.log(`Invalid addressing mode ${opDef.args[i]}`)
-                break
+                throw new Error(`Invalid arg mode ${argMode}`)
+
             }
 
             // Add the arg
             args.push(arg)
-
-            // Move to next addressing mode
-            --argModePos
         }
 
         if (debug){
