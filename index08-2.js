@@ -22,7 +22,7 @@ for (let l = 0; l < layers; l++) {
         for (let w = 0; w < width; w++) {
             const px = parseInt(input.substr(c,1))
             if (px != 2 && image[h][w] == '.') {
-                image[h][w] = (px == 0 ? ' ' : 'O')
+                image[h][w] = (px == 0 ? ' ' : '\u258a')
             }
             ++c
         }
