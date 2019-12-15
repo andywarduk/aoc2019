@@ -262,8 +262,7 @@ function explore(mem)
             // drawDungeon()
         }
 
-        console.log(step)
-        process.exit()
+        return step
     }
 
 }
