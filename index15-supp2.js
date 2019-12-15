@@ -242,15 +242,15 @@ function explore(mem)
         {
             let res
 
-            if (x == x2 && y == y2) {
-                // Found
-                return [true, 1]
-            }
-
             let save = dungeon[y][x]
             dungeon[y][x] = 12
 
             drawFrame()
+
+            if (x == x2 && y == y2) {
+                // Found
+                return [true, 1]
+            }
 
             if (from != 'S' && dungeon[y - 1][x] != 0) {
                 res = walk(x, y - 1, 'N')
