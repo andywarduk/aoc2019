@@ -80,26 +80,21 @@ function explore(mem)
 
     // Execute
     IntCode.exec(false, mem, () => {
-        dir = -1
-        do {
-            if (route.N === undefined && getLoc(x, y - 1) == -1) {
-                dir = 1
-            } else if (route.E === undefined && getLoc(x + 1, y) == -1) {
-                dir = 4
-            } else if (route.S === undefined && getLoc(x, y + 1) == -1) {
-                dir = 2
-            } else if (route.W === undefined && getLoc(x - 1, y) == -1) {
-                dir = 3
+        if (route.N === undefined && getLoc(x, y - 1) == -1) {
+            dir = 1
+        } else if (route.E === undefined && getLoc(x + 1, y) == -1) {
+            dir = 4
+        } else if (route.S === undefined && getLoc(x, y + 1) == -1) {
+            dir = 2
+        } else if (route.W === undefined && getLoc(x - 1, y) == -1) {
+            dir = 3
+        } else {
+            if (route.parent == undefined) {
+                return 'interrupt'
             } else {
-                if (route.parent == undefined) {
-                    drawDungeon()
-                    console.log(calcDistance(startX, startY, oxX, oxY))
-                    process.exit()
-                } else {
-                    dir = route.parentDir
-                }
+                dir = route.parentDir
             }
-        } while (dir == -1)
+        }
 
         return dir
 
@@ -202,10 +197,11 @@ function explore(mem)
             break
 
         }
-
-        // drawDungeon()
     })
 
+    drawDungeon()
+    console.log(calcDistance(startX, startY, oxX, oxY))
+    
     function calcDistance(x1, y1, x2, y2)
     {
         let res

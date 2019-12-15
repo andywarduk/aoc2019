@@ -52,7 +52,15 @@ function executeIntCode(debug, mem, input, output, pc = 0)
             name: 'in',
             args: 'w',
             fn: (a) => {
-                setMem(a, input())
+                const val = input()
+                if (typeof(val) == 'number') {
+                    setMem(a, input())
+                } else if (typeof(val) == 'string') {
+                    running = false
+                    stopReason = val
+                } else {
+                    throw new Error(`input return type '${typeof val}' not supported`)
+                }
             }
         },
         4: { // Print output
