@@ -226,14 +226,22 @@ function executeIntCode(debug, mem, input, output, pc = 0)
     }
 }
 
-if (require.main === module) {
-    // Running as a script - do some tests
-    testIntCode()
+const modDef = {
+    exec: executeIntCode
+}
 
-} else {
-    // Required as a module
-    module.exports.exec = executeIntCode
+if (typeof module === 'object') {
+    if (require.main == module) {
+        // Running as a script - do some tests
+        testIntCode()
 
+    } else {
+        // Required as a module
+        module.exports = modDef
+
+    }
+} else if (typeof define === 'function') {
+    define(modDef)
 }
 
 function assertEqual(expected, actual)
