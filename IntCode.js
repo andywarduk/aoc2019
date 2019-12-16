@@ -54,10 +54,14 @@ function executeIntCode(debug, mem, input, output, pc = 0)
             fn: (a) => {
                 const val = input()
                 if (typeof(val) == 'number') {
-                    setMem(a, input())
+                    setMem(a, val)
                 } else if (typeof(val) == 'string') {
                     running = false
                     stopReason = val
+                } else if (Array.isArray(val)) {
+                    setMem(a, val[0])
+                    running = false
+                    stopReason = val[1]
                 } else {
                     throw new Error(`input return type '${typeof val}' not supported`)
                 }
