@@ -276,14 +276,14 @@ function run(mem)
             }
 
             if (!found) {
-                console.error("No comrpession found")
+                console.error("No compression found")
                 process.exit()
             }
 
             // Display code
             console.log(`Code: ${codeString} (length ${codeString.length})`)
             for (let fn of fnTable) {
-                console.log(`   ${fn} (length ${fn.length})`)
+                console.log(`      ${fn} (length ${fn.length})`)
             }
 
             function cmpArray(a1, a2) 
