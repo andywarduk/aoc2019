@@ -9,9 +9,11 @@ console.log("  01234567890123456789012345678901234567890123456789012345678901234
 map.map((e, i) => console.log((i % 10) + " " + e.join("")))
 
 // Find keys
+let robotCnt = 0
 const keys = map.reduce((keys, line, y) => {
     return line.reduce((keys, block, x) => {
         if (block == '@' || isLowerCase(block)) {
+            if (block == '@') block = String.fromCharCode(0x30 + ++robotCnt)
             keys = {
                 ...keys,
                 [block]: {
@@ -25,20 +27,18 @@ const keys = map.reduce((keys, line, y) => {
     }, keys)
 }, {})
 
-// Find routes between all keys
+// Find routes between all keys / robots
 for (let k1 of Object.keys(keys)) {
     const key = keys[k1]
 
     key.routes = {}
     for (let k2 of Object.keys(keys)) {
-        if (k2 != k1 && k2 != '@') {
+        if (k2 != k1 && k2 > '@') {
             let route = findRoute(key, k2)
-            // console.log(`${k1} -> ${k2} ${route.dist}`)
-            if (!route) {
-                console.error(`Unable to route from ${k1} to ${k2}`)
-                process.exit()
+            if (route) {
+                // console.log(`${k1} -> ${k2} ${route.dist}`)
+                key.routes[k2] = route
             }
-            key.routes[k2] = route
         }
     }
 }
@@ -50,38 +50,47 @@ function collectKeys(keys)
     const distCache = {}
     const keyArr = Object.keys(keys).filter(e => isLowerCase(e)).sort()
 
-    const bestDist = step('@', keyArr, 0)
+    const bestDist = step(['1', '2', '3', '4'], keyArr, 0)
 
     console.log(bestDist)
 
-    function step(curPos, remainingKeys)
+    function step(robotsPos, remainingKeys)
     {
+        const choices = []
+
         // Look in the cache
-        let cacheKey = `${curPos}-${remainingKeys.join('')}`
+        let cacheKey = `${robotsPos.join('')}-${remainingKeys.join('')}`
         if (distCache[cacheKey]) {
             // console.log("Cache hit")
             return distCache[cacheKey]
         }
+        
+        for (let robot of robotsPos) {
+            // Get list of accesible keys
+            const keyChoice = remainingKeys.filter(k => {
+                // Accessible by this robot?
+                if (!keys[robot].routes[k]) return false
+                
+                // Got keys to the doors?
+                for (let door of keys[robot].routes[k].doors) {
+                    if (remainingKeys.indexOf(door.toLowerCase()) >= 0) {
+                        return false
+                    }
+                }
 
-        // Get list of accesible keys
-        const keyChoice = remainingKeys.filter(k => {
-            // Got keys to the doors?
-            for (let door of keys[curPos].routes[k].doors) {
-                if (remainingKeys.indexOf(door.toLowerCase()) >= 0) {
-                    return false
+                return true
+            })
+
+            for (let key of keyChoice) {
+                if (keys[robot].routes[key]) {
+                    choices.push({
+                        robot,
+                        key,
+                        dist: keys[robot].routes[key].dist        
+                    })
                 }
             }
-
-            return true
-        })
-
-        // Calculate distances
-        const choices = keyChoice.map(key => {
-            return {
-                key,
-                dist: keys[curPos].routes[key].dist
-            }
-        })
+        }
 
         if (remainingKeys.length == 1) {
             if (choices[0].key == remainingKeys[0]) return choices[0].dist
@@ -94,7 +103,10 @@ function collectKeys(keys)
             let nextKeys = [...remainingKeys]
             nextKeys.splice(nextKeys.indexOf(choice.key), 1)
 
-            let thisDist = step(choice.key, nextKeys)
+            const nextRobots = [...robotsPos]
+            nextRobots[nextRobots.indexOf(choice.robot)] = choice.key
+
+            let thisDist = step(nextRobots, nextKeys)
             if (thisDist > 0) {
                 thisDist += choice.dist
                 if (bestDist == -1 || thisDist < bestDist) {
@@ -245,13 +257,30 @@ function getMap(mapNo)
         // Split in to chars
         map = map.map(e => e.split(""))
 
+        // Set up map for part 2
+        map[39][39] = '@'
+        map[39][40] = '#'
+        map[39][41] = '@'
+
+        map[40][39] = '#'
+        map[40][40] = '#'
+        map[40][41] = '#'
+
+        map[41][39] = '@'
+        map[41][40] = '#'
+        map[41][41] = '@'
+
         break
 
     case 1:
         map = [
-            '#########',
-            '#b.A.@.a#',
-            '#########'
+            '#######',
+            '#a.#Cd#',
+            '##@#@##',
+            '#######',
+            '##@#@##',
+            '#cB#Ab#',
+            '#######'
         ]
 
         // Split in to chars
@@ -261,11 +290,13 @@ function getMap(mapNo)
 
     case 2:
         map = [
-            '########################',
-            '#f.D.E.e.C.b.A.@.a.B.c.#',
-            '######################.#',
-            '#d.....................#',
-            '########################'
+            '###############',
+            '#d.ABC.#.....a#',
+            '######@#@######',
+            '###############',
+            '######@#@######',
+            '#b.....#.....c#',
+            '###############'
         ]
 
         // Split in to chars
@@ -275,11 +306,13 @@ function getMap(mapNo)
 
     case 3:
         map = [
-            '########################',
-            '#...............b.C.D.f#',
-            '#.######################',
-            '#.....@.a.B.c.d.A.e.F.g#',
-            '########################'
+            '#############',
+            '#DcBa.#.GhKl#',
+            '#.###@#@#I###',
+            '#e#d#####j#k#',
+            '###C#@#@###J#',
+            '#fEbA.#.FgHi#',
+            '#############'
         ]
 
         // Split in to chars
@@ -289,15 +322,15 @@ function getMap(mapNo)
         
     case 4:
         map = [
-            '#################',
-            '#i.G..c...e..H.p#',
-            '########.########',
-            '#j.A..b...f..D.o#',
-            '########@########',
-            '#k.E..a...g..B.n#',
-            '########.########',
-            '#l.F..d...h..C.m#',
-            '#################'
+            '#############',
+            '#g#f.D#..h#l#',
+            '#F###e#E###.#',
+            '#dCba@#@BcIJ#',
+            '#############',
+            '#nK.L@#@G...#',
+            '#M###N#H###.#',
+            '#o#m..#i#jk.#',
+            '#############'
         ]
 
         // Split in to chars
@@ -305,21 +338,6 @@ function getMap(mapNo)
 
         break
         
-    case 5:
-        map = [
-            '########################',
-            '#@..............ac.GI.b#',
-            '###d#e#f################',
-            '###A#B#C################',
-            '###g#h#i################',
-            '########################'
-        ]
-
-        // Split in to chars
-        map = map.map(e => e.split(""))
-
-        break
-
     }
 
     return map
