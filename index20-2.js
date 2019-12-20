@@ -48,7 +48,7 @@ function processMap(map)
         return (xAdd != 0 ? x : y)
     }
 
-    function addPortal(inX, inY, outX, outY, xAdd, yAdd)
+    function addPortal(inX, inY, outX, outY, xAdd, yAdd, inner)
     {
         let char1 = map[outY][outX]
         let char2 = map[outY + yAdd][outX + xAdd]
@@ -64,10 +64,11 @@ function processMap(map)
             inX,
             inY,
             outX,
-            outY
+            outY,
+            dimAdd: (inner ? 1 : -1)
         }
 
-        // console.log(`  ${portal} in at ${inX},${inY} out at ${outX},${outY}`)
+        // console.log(`  ${portal} in at ${inX},${inY} out at ${outX},${outY} dimension add ${route.dimAdd}`)
 
         if (portals[portal] === undefined) {
             portals[portal] = {
@@ -78,7 +79,7 @@ function processMap(map)
         }
     }
 
-    function findPortals(l, t, r, b, add)
+    function findPortals(l, t, r, b, add, inner)
     {
         let x
         let y
@@ -87,7 +88,7 @@ function processMap(map)
         y = t + add
         for (x = l + add; x <= r - add; x++) {
             if (map[y][x] != ' ') {
-                addPortal(x, y - add, x, y, 0, add)
+                addPortal(x, y - add, x, y, 0, add, inner)
             }
         }
 
@@ -95,7 +96,7 @@ function processMap(map)
         x = r - add
         for (y = t + add; y <= b - add; y++) {
             if (map[y][x] != ' ') {
-                addPortal(x + add, y, x, y, -add, 0)
+                addPortal(x + add, y, x, y, -add, 0, inner)
             }
         }
 
@@ -103,7 +104,7 @@ function processMap(map)
         y = b - add
         for (x = l + add; x <= r - add; x++) {
             if (map[y][x] != ' ') {
-                addPortal(x, y + add, x, y, 0, -add)
+                addPortal(x, y + add, x, y, 0, -add, inner)
             }
         }
 
@@ -111,7 +112,7 @@ function processMap(map)
         x = l + add
         for (y = t + add; y <= b - add; y++) {
             if (map[y][x] != ' ') {
-                addPortal(x - add, y, x, y, add, 0)
+                addPortal(x - add, y, x, y, add, 0, inner)
             }
         }
     }
@@ -128,9 +129,9 @@ function processMap(map)
     const ib = findEdge(0, 1, true)
 
     // console.log("Outside portals:")
-    findPortals(ol, ot, or, ob, -1)
+    findPortals(ol, ot, or, ob, -1, false)
     // console.log("Inside portals:")
-    findPortals(il, it, ir, ib, 1)
+    findPortals(il, it, ir, ib, 1, true)
 
     return portals
 }
@@ -141,18 +142,25 @@ function walk(map, portals)
 
     let dists = []
 
-    // Initialise distance array
-    for (let y = 0; y < map.length; y++) {
-        dists[y] = []
-        for (let x = 0; x < map[y].length; x++) {
-            dists[y][x] = -1
+    function addDistDim(dim)
+    {
+        dists[dim] = []
+
+        // Initialise distance array
+        for (let y = 0; y < map.length; y++) {
+            dists[dim][y] = []
+            for (let x = 0; x < map[y].length; x++) {
+                dists[dim][y][x] = -1
+            }
         }
     }
 
-    fronts = [[portals['AA'].routes[0].inX, portals['AA'].routes[0].inY]]
+    addDistDim(0)
+
+    fronts = [[portals['AA'].routes[0].inX, portals['AA'].routes[0].inY, 0]]
 
     // Walk the maze
-    function newFront(x, y, curDist, nextFronts)
+    function newFront(x, y, dim, curDist, nextFronts)
     {
         while (true) {
             if (map[y][x] == '#') {
@@ -170,8 +178,12 @@ function walk(map, portals)
                         // Skip
                         return
                     case 'ZZ':
-                        // Finished
-                        console.log(`Distance to ZZ: ${curDist}`)
+                        if (dim == 0) {
+                            // Finished
+                            console.log(`Distance to ZZ: ${curDist}`)
+                            process.exit()
+                        }
+                        // Treat as wall
                         return
                     default:
                         // Unexpected
@@ -180,13 +192,25 @@ function walk(map, portals)
                     }
                 }
 
+                let dimAdd = portal.inRoute.dimAdd
+
+                if (dimAdd == 1 && dim == 0) {
+                    // Outer portals at top dimension are walls
+                    return
+                }
+
+                dim += dimAdd
+                if (dists[dim] === undefined) {
+                    addDistDim(dim)
+                }
+
                 x = portal.inRoute.inX
                 y = portal.inRoute.inY
 
                 continue
             }
 
-            if (dists[y][x] != -1 && dists[y][x] <= curDist) {
+            if (dists[dim][y][x] != -1 && dists[dim][y][x] <= curDist) {
                 // Another front got here earlier
                 return
             }
@@ -194,8 +218,8 @@ function walk(map, portals)
             break
         }
 
-        dists[y][x] = curDist
-        nextFronts.push([x, y])
+        dists[dim][y][x] = curDist
+        nextFronts.push([x, y, dim])
     }
 
     let curDist = 0
@@ -205,11 +229,12 @@ function walk(map, portals)
         for (let f of fronts) {
             let x = f[0]
             let y = f[1]
+            let dim = f[2]
 
-            newFront(x, y + 1, curDist, nextFronts)
-            newFront(x + 1, y, curDist, nextFronts)
-            newFront(x, y - 1, curDist, nextFronts)
-            newFront(x - 1, y, curDist, nextFronts)
+            newFront(x, y + 1, dim, curDist, nextFronts)
+            newFront(x + 1, y, dim, curDist, nextFronts)
+            newFront(x, y - 1, dim, curDist, nextFronts)
+            newFront(x - 1, y, dim, curDist, nextFronts)
         }
 
         fronts = nextFronts
@@ -267,7 +292,7 @@ function getMap(mapNo)
         break
 
     case 1:
-        // Example 1
+        // Example 1 (26 steps)
         map = [
             '         A           ',
             '         A           ',
@@ -295,43 +320,43 @@ function getMap(mapNo)
     case 2:
         // Example 2
         map = [
-            '                   A               ',
-            '                   A               ',
-            '  #################.#############  ',
-            '  #.#...#...................#.#.#  ',
-            '  #.#.#.###.###.###.#########.#.#  ',
-            '  #.#.#.......#...#.....#.#.#...#  ',
-            '  #.#########.###.#####.#.#.###.#  ',
-            '  #.............#.#.....#.......#  ',
-            '  ###.###########.###.#####.#.#.#  ',
-            '  #.....#        A   C    #.#.#.#  ',
-            '  #######        S   P    #####.#  ',
-            '  #.#...#                 #......VT',
-            '  #.#.#.#                 #.#####  ',
-            '  #...#.#               YN....#.#  ',
-            '  #.###.#                 #####.#  ',
-            'DI....#.#                 #.....#  ',
-            '  #####.#                 #.###.#  ',
-            'ZZ......#               QG....#..AS',
-            '  ###.###                 #######  ',
-            'JO..#.#.#                 #.....#  ',
-            '  #.#.#.#                 ###.#.#  ',
-            '  #...#..DI             BU....#..LF',
-            '  #####.#                 #.#####  ',
-            'YN......#               VT..#....QG',
-            '  #.###.#                 #.###.#  ',
-            '  #.#...#                 #.....#  ',
-            '  ###.###    J L     J    #.#.###  ',
-            '  #.....#    O F     P    #.#...#  ',
-            '  #.###.#####.#.#####.#####.###.#  ',
-            '  #...#.#.#...#.....#.....#.#...#  ',
-            '  #.#####.###.###.#.#.#########.#  ',
-            '  #...#.#.....#...#.#.#.#.....#.#  ',
-            '  #.###.#####.###.###.#.#.#######  ',
-            '  #.#.........#...#.............#  ',
-            '  #########.###.###.#############  ',
-            '           B   J   C               ',
-            '           U   P   P               ',
+            '             Z L X W       C                 ',
+            '             Z P Q B       K                 ',
+            '  ###########.#.#.#.#######.###############  ',
+            '  #...#.......#.#.......#.#.......#.#.#...#  ',
+            '  ###.#.#.#.#.#.#.#.###.#.#.#######.#.#.###  ',
+            '  #.#...#.#.#...#.#.#...#...#...#.#.......#  ',
+            '  #.###.#######.###.###.#.###.###.#.#######  ',
+            '  #...#.......#.#...#...#.............#...#  ',
+            '  #.#########.#######.#.#######.#######.###  ',
+            '  #...#.#    F       R I       Z    #.#.#.#  ',
+            '  #.###.#    D       E C       H    #.#.#.#  ',
+            '  #.#...#                           #...#.#  ',
+            '  #.###.#                           #.###.#  ',
+            '  #.#....OA                       WB..#.#..ZH',
+            '  #.###.#                           #.#.#.#  ',
+            'CJ......#                           #.....#  ',
+            '  #######                           #######  ',
+            '  #.#....CK                         #......IC',
+            '  #.###.#                           #.###.#  ',
+            '  #.....#                           #...#.#  ',
+            '  ###.###                           #.#.#.#  ',
+            'XF....#.#                         RF..#.#.#  ',
+            '  #####.#                           #######  ',
+            '  #......CJ                       NM..#...#  ',
+            '  ###.#.#                           #.###.#  ',
+            'RE....#.#                           #......RF',
+            '  ###.###        X   X       L      #.#.#.#  ',
+            '  #.....#        F   Q       P      #.#.#.#  ',
+            '  ###.###########.###.#######.#########.###  ',
+            '  #.....#...#.....#.......#...#.....#.#...#  ',
+            '  #####.#.###.#######.#######.###.###.#.#.#  ',
+            '  #.......#.......#.#.#.#.#...#...#...#.#.#  ',
+            '  #####.###.#####.#.#.#.#.###.###.#.###.###  ',
+            '  #.......#.....#.#...#...............#...#  ',
+            '  #############.#.#.###.###################  ',
+            '               A O F   N                     ',
+            '               A A D   M                     '
         ]
 
         break
