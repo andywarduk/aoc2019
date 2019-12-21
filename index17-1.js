@@ -14,7 +14,7 @@ run(mem)
 function run(mem)
 {
     const lines = []
-    let curLine =''
+    let curLine = ''
 
     IntCode.exec(false, mem, () => 0, (val) => {
         if (val == 0x0a) {
