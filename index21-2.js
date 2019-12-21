@@ -20,6 +20,7 @@ function run(mem)
     let curLine = ''
 
     const springScript = [
+
         'OR I J',
         'OR F J',
         'AND E J',
@@ -33,7 +34,17 @@ function run(mem)
         'NOT T T',
     
         'AND T J',
-    
+
+/* Least instructions
+        'OR B J',
+        'AND C J',
+        'NOT J J',
+        'AND D J',
+        'AND H J',
+        'NOT A T',
+        'OR T J',
+*/
+
         'RUN'
     ]
     let ssLine = 0
