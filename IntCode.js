@@ -4,6 +4,7 @@ function executeIntCode(debug, mem, input, output, pc = 0)
     let running = true
     let relBase = 0
     let maxMem = mem.length - 1
+    let lastPc
 
     function extendMem(newLen) {
         for (let i = mem.length; i <= newLen; i++) {
@@ -125,6 +126,9 @@ function executeIntCode(debug, mem, input, output, pc = 0)
     }
 
     while(running) {
+        // Save pc
+        lastPc = pc
+
         let disas = `${pc}: `
 
         // Get instruction
@@ -225,6 +229,7 @@ function executeIntCode(debug, mem, input, output, pc = 0)
     }
 
     return {
+        lastPc,
         pc,
         stopReason
     }
