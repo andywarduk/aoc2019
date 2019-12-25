@@ -8,7 +8,8 @@
   },
   "dependencies": {
     "gif-encoder": "^0.7.2",
-    "pngjs": "^3.4.0"
+    "pngjs": "^3.4.0",
+    "readline-sync": "^1.4.10"
   },
   "devDependencies": {
     "eslint": "^6.7.2"
