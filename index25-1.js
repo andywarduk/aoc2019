@@ -54,6 +54,20 @@ IntCode.exec(false, mem, () => {
     }
 })
 
+/*
+                                 sand
+                                   |
+          O              O---------O
+          |                        |
+  (X)    hat-----O---------------Start
+    |     |      |                 |
+    O-----O   planet   wreath----heater
+                         |         |
+                 O-----broch       O------loom
+                         |
+                 O----pointer------O
+*/
+
 function pickupCommands()
 {
     return [
